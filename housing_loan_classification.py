@@ -23,6 +23,7 @@ DATA_ROOT = ROOT / "data"
 def transform_data(df):
     df_trans = (
         df
+        .pipe(lambda x: x[~pd.isna(x["LoanAmount"]) & ~pd.isna(x["Loan_Status"])])
         .assign(
             Gender = lambda x: x["Gender"].map({"Male": 0, "Female": 1, np.nan: 2}),
             Married = lambda x: x["Married"].map({"No": 0, "Yes": 1, np.nan: 2}),
@@ -30,8 +31,8 @@ def transform_data(df):
             Education = lambda x: x["Education"].map({"Not Graduate": 0, "Graduate": 1}),
             ApplicantIncomeNorm = lambda x: (x["ApplicantIncome"] - x["ApplicantIncome"].mean()) / x["ApplicantIncome"].std(),
             CoapplicantIncomeNorm = lambda x: (x["CoapplicantIncome"] - x["CoapplicantIncome"].mean()) / x["CoapplicantIncome"].std(),
-            LoanAmount = lambda x: x["LoanAmount"].fillna(0),
-            Credit_History = lambda x: x["Credit_History"].fillna(0),
+            LoanAmountNorm = lambda x: (x["LoanAmount"] - x["LoanAmount"].mean()) / x["LoanAmount"].std(),
+            Credit_History = lambda x: x["Credit_History"].fillna(2),
             Property_Area = lambda x: x["Property_Area"].map({"Rural": 0, "Semiurban": 1, "Urban": 1}),
             Loan_Status = lambda x: x["Loan_Status"].map({"Y": 1, "N": 0}))
     )
@@ -44,7 +45,7 @@ class HousingLoanData(Dataset):
     def __init__(self, selected_cols, train=True):
         self.data = transform_data(pd.read_csv(DATA_ROOT / "loan_data.csv"))
         self.inputs = torch.Tensor(self.data.loc[:, selected_cols].values)
-        targets = torch.Tensor(self.data.loc[:, "Loan_Status"])
+        targets = torch.Tensor(self.data.loc[:, "Loan_Status"].values)
         self.targets = torch.reshape(targets, (targets.shape[0], 1))
         
     def __len__(self):
@@ -83,10 +84,31 @@ def compute_accuracy(model, dataloader):
 # DATA
 # define set of model variables
 model_attr = ["Gender", "Dependents", "Education",
-              "ApplicantIncomeNorm", "CoapplicantIncomeNorm", "LoanAmount",
+              "ApplicantIncomeNorm", "CoapplicantIncomeNorm", "LoanAmountNorm",
               "Credit_History", "Property_Area"]
 
 housing_data = HousingLoanData(model_attr)
+
+# %%
+# inspect model variables
+housing_dataset = housing_data.data
+
+fig, axes = plt.subplots(2, 4, figsize=(10,6))
+axes = np.ravel(axes)
+
+for ii, ax in enumerate(axes):
+    ax.hist(housing_dataset[model_attr[ii]], align="mid")
+    ax.set_title(model_attr[ii])
+    ax.set_axisbelow(True)
+    ax.grid(which="both")
+    
+np.reshape(axes, (2, 4))
+fig.tight_layout()
+
+plt.show()
+
+# %%
+# create data loaders
 train_dataloader, test_dataloader = get_data_loaders(housing_data, [0.8, 0.2], batch_size=5)
 
 # %%
