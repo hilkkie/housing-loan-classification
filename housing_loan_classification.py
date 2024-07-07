@@ -149,3 +149,22 @@ def train_model(model, learning_rate, n_epochs, training_data, test_data):
 logreg = LogisticRegression(len(model_attr))
 
 train_model(logreg, 0.001, 150, train_dataloader, test_dataloader)
+
+# %%
+# MLP
+class MLP(nn.Module):
+    def __init__(self, n_inputs, n_hidden, activation_fn):
+        super(MLP, self).__init__()
+        self.net = nn.Sequential(
+            nn.Linear(n_inputs, n_hidden),
+            activation_fn,
+            nn.Linear(n_hidden, 1)
+        )
+        
+    def forward(self, x):
+        return self.net(x)
+    
+# %%
+mlp = MLP(len(model_attr), 15, nn.Tanh())
+
+train_model(mlp, 0.0001, 200, train_dataloader, test_dataloader)
