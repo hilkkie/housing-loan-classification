@@ -122,26 +122,30 @@ class LogisticRegression(nn.Module):
     def forward(self, x):
         return self.linear(x)
     
+    
+# function to train a model with given learning rate and data
+def train_model(model, learning_rate, n_epochs, training_data, test_data):
+    # set up optimizer
+    optimizer = torch.optim.Adam(model.parameters(), lr = learning_rate) # create optimizer
+    
+    accuracy = np.zeros(n_epochs)
+
+    for n in range(n_epochs):
+        for inputs, outputs in training_data:
+            optimizer.zero_grad() # zero the gradient buffers
+            ypred = model(inputs) # calculate the output for training set
+            loss = F.binary_cross_entropy(F.sigmoid(ypred), outputs) # calculate binary cross entropy loss
+            loss.backward() # backpropagation of the error
+            optimizer.step() # update the weights
+        
+        accuracy[n] = compute_accuracy(model, test_data)
+    
+    plt.figure()
+    plt.plot(np.arange(1, n_epochs+1), accuracy)
+    plt.show()
+
+# %%    
 # create logistic regression model for training
 logreg = LogisticRegression(len(model_attr))
 
-# set up optimizer
-learning_rate = 0.001
-optimizer = torch.optim.Adam(logreg.parameters(), lr = learning_rate) # create optimizer
-
-n_epochs = 200
-accuracy = np.zeros(n_epochs)
-
-for n in range(n_epochs):
-    for inputs, outputs in train_dataloader:
-        optimizer.zero_grad() # zero the gradient buffers
-        ypred = logreg(inputs) # calculate the output for training set
-        loss = F.binary_cross_entropy(F.sigmoid(ypred), outputs) # calculate binary cross entropy loss
-        loss.backward() # backpropagation of the error
-        optimizer.step() # update the weights
-        
-    accuracy[n] = compute_accuracy(logreg, test_dataloader)
-    
-plt.figure()
-plt.plot(np.arange(1, n_epochs+1), accuracy)
-plt.show()
+train_model(logreg, 0.001, 150, train_dataloader, test_dataloader)
